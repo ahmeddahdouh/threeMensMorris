@@ -15,6 +15,7 @@ FONT = pygame.font.Font(None, 36)
 BUTTON_COLOR = (100, 180, 100)
 BUTTON_HOVER_COLOR = (120, 200, 120)
 BUTTON_TEXT_COLOR = (255, 255, 255)
+HIGHLIGHT_COLOR = (120, 255, 120, 150)  # Couleur de surbrillance pour les positions possibles
 
 # Création de la fenêtre
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -48,6 +49,13 @@ winner = None  # Variable pour stocker le gagnant
 # Animation
 animations = []  # Liste pour stocker les animations en cours
 animation_speed = 10  # Vitesse de l'animation
+
+# Adjacence des positions
+adjacent_positions = {
+    0: [1, 3, 4], 1: [0, 2, 4], 2: [1, 4, 5],
+    3: [0, 4, 6], 4: [0, 1, 2, 3, 5, 6, 7, 8], 5: [2, 4, 8],
+    6: [3, 4, 7], 7: [4, 6, 8], 8: [4, 5, 7]
+}
 
 
 # Classe pour boutons
@@ -136,6 +144,15 @@ def create_place_animation(index, player):
     animations.append(PieceAnimation(start_pos, pos, color))
 
 
+# Fonction pour obtenir les positions possibles pour un pion sélectionné
+def get_possible_moves(piece_index):
+    if phase == "placing":
+        return [i for i, cell in enumerate(board) if cell is None]
+    elif phase == "moving":
+        return [i for i in adjacent_positions[piece_index] if board[i] is None]
+    return []
+
+
 # Fonction pour dessiner le plateau
 def draw_board():
     screen.fill(BACKGROUND_COLOR)
@@ -158,6 +175,20 @@ def draw_board():
     # Dessiner les points aux intersections
     for pos in positions:
         pygame.draw.circle(screen, LINE_COLOR, pos, 10)
+
+    # Dessiner les surbrillances des positions possibles
+    if selected_piece is not None and phase == "moving":
+        possible_moves = get_possible_moves(selected_piece)
+        for move_index in possible_moves:
+            # Créer une surface semi-transparente pour la surbrillance
+            highlight_surf = pygame.Surface((CIRCLE_RADIUS * 2, CIRCLE_RADIUS * 2), pygame.SRCALPHA)
+            pygame.draw.circle(highlight_surf, HIGHLIGHT_COLOR, (CIRCLE_RADIUS, CIRCLE_RADIUS), CIRCLE_RADIUS)
+            screen.blit(highlight_surf,
+                        (positions[move_index][0] - CIRCLE_RADIUS, positions[move_index][1] - CIRCLE_RADIUS))
+
+            # Dessiner un cercle pulsant
+            pulse = math.sin(pygame.time.get_ticks() / 200) * 5
+            pygame.draw.circle(screen, (100, 255, 100), positions[move_index], int(CIRCLE_RADIUS + pulse), 2)
 
     # Dessiner les pions placés
     for i, player in enumerate(board):
@@ -404,11 +435,6 @@ def handle_click(pos):
 
 # Vérifie si deux positions sont adjacentes
 def is_adjacent(start, end):
-    adjacent_positions = {
-        0: [1, 3, 4], 1: [0, 2, 4], 2: [1, 4, 5],
-        3: [0, 4, 6], 4: [0, 1, 2, 3, 5, 6, 7, 8], 5: [2, 4, 8],
-        6: [3, 4, 7], 7: [4, 6, 8], 8: [4, 5, 7]
-    }
     return end in adjacent_positions[start]
 
 
